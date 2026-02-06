@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pro Budget</title>
+    <link rel="manifest" href="manifest.json">
+    <style>
+        :root { --primary: #28a745; --bg: #f0f2f5; }
+        body { font-family: -apple-system, sans-serif; padding: 15px; background: var(--bg); margin: 0; }
+        .card { background: white; padding: 15px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); margin-bottom: 15px; }
+        h2, h3 { margin-top: 0; color: #333; }
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+        .stat-box { background: white; padding: 15px; border-radius: 12px; text-align: center; }
+        .stat-val { display: block; font-size: 1.4rem; font-weight: bold; color: var(--primary); }
+        input, select { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
+        .btn { width: 100%; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 5px; }
+        .btn-save { background: var(--primary); color: white; }
+        .btn-file { background: #6c757d; color: white; margin-bottom: 10px; }
+        .day-detail { border-top: 1px solid #eee; margin-top: 10px; padding-top: 10px; }
+        .meal-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dotted #ccc; }
+    </style>
+</head>
+<body>
+
+    <button class="btn btn-file" onclick="openFile()">📂 Load Budget File</button>
+
+    <div class="stats-grid">
+        <div class="stat-box">
+            <span class="stat-label">Month Total</span>
+            <span class="stat-val" id="monthTotal">$0</span>
+        </div>
+        <div class="stat-box">
+            <span class="stat-label">Daily Avg</span>
+            <span class="stat-val" id="dailyAvg">$0</span>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>Daily Tracker</h3>
+        <input type="date" id="datePicker" onchange="renderDay()">
+        <div id="dayContent" class="day-detail">
+            <div class="meal-row"><span>Breakfast:</span><input type="number" id="meal_b" placeholder="0" onchange="updateDaily()"></div>
+            <div class="meal-row"><span>Lunch:</span><input type="number" id="meal_l" placeholder="0" onchange="updateDaily()"></div>
+            <div class="meal-row"><span>Dinner:</span><input type="number" id="meal_d" placeholder="0" onchange="updateDaily()"></div>
+            <div class="meal-row"><span>Other:</span><input type="number" id="meal_o" placeholder="0" onchange="updateDaily()"></div>
+            <h4 style="text-align: right;">Day Total: Rs: <span id="dayTotal">0</span></h4>
+        </div>
+    </div>
+
+    <button class="btn btn-file" style="background:#007bff" onclick="saveToFile()">💾 Sync to Phone</button>
+
+    <script>
+        // Data structure: { "2023-10-27": {b: 10, l: 15, d: 20, o: 5}, ... }
+        let budgetData = {};
+        let fileHandle;
+
+        // Set date picker to today by default
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('datePicker').value = today;
+
+        if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js'); }
+
+        async function openFile() {
+            try {
+                [fileHandle] = await window.showOpenFilePicker();
+                const file = await fileHandle.getFile();
+                const content = await file.text();
+                budgetData = JSON.parse(content);
+                refreshUI();
+            } catch (e) { alert("File loaded failed or cancelled"); }
+        }
+
+        async function saveToFile() {
+            if (!fileHandle) {
+                fileHandle = await window.showSaveFilePicker({
+                    suggestedName: 'my_budget_pro.txt',
+                    types: [{ description: 'Text', accept: {'text/plain': ['.txt']} }]
+                });
+            }
+            const writable = await fileHandle.createWritable();
+            await writable.write(JSON.stringify(budgetData));
+            await writable.close();
+        }
+
+        function updateDaily() {
+            const date = document.getElementById('datePicker').value;
+            budgetData[date] = {
+                b: parseFloat(document.getElementById('meal_b').value) || 0,
+                l: parseFloat(document.getElementById('meal_l').value) || 0,
+                d: parseFloat(document.getElementById('meal_d').value) || 0,
+                o: parseFloat(document.getElementById('meal_o').value) || 0
+            };
+            refreshUI();
+        }
+
+        function renderDay() {
+            const date = document.getElementById('datePicker').value;
+            const day = budgetData[date] || {b:0, l:0, d:0, o:0};
+            document.getElementById('meal_b').value = day.b;
+            document.getElementById('meal_l').value = day.l;
+            document.getElementById('meal_d').value = day.d;
+            document.getElementById('meal_o').value = day.o;
+            document.getElementById('dayTotal').innerText = (day.b + day.l + day.d + day.o).toFixed(2);
+        }
+
+        function refreshUI() {
+            renderDay();
+            calculateStats();
+        }
+
+        function calculateStats() {
+            const now = new Date();
+            const currentMonth = now.getMonth();
+            const currentYear = now.getFullYear();
+            
+            let monthTotal = 0;
+            let dayCount = 0;
+
+            for (let dateStr in budgetData) {
+                const d = new Date(dateStr);
+                if (d.getMonth() === currentMonth && d.getFullYear() === currentYear) {
+                    const day = budgetData[dateStr];
+                    monthTotal += (day.b + day.l + day.d + day.o);
+                    dayCount++;
+                }
+            }
+
+            const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+            const avg = dayCount > 0 ? (monthTotal / dayCount) : 0;
+
+            document.getElementById('monthTotal').innerText = `Rs:${monthTotal.toFixed(2)}`;
+            document.getElementById('dailyAvg').innerText = `Rs:${avg.toFixed(2)}`;
+        }
+
+        // Initial load
+        refreshUI();
+    </script>
+</body>
+</html>
