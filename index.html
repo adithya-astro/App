@@ -51,105 +51,92 @@
     <button class="btn btn-file" style="background:#007bff" onclick="saveToFile()">💾 Sync to Phone</button>
 
     <script>
-        // Data structure: { "2023-10-27": {b: 10, l: 15, d: 20, o: 5}, ... }
-        // 1. DATA INITIALIZATION
-// This line looks for saved data in the browser's memory immediately
-let budgetData = JSON.parse(localStorage.getItem('budgetCache')) || {};
-let fileHandle;
+        /let fileHandle;
 
-const today = new Date().toISOString().split('T')[0];
-document.getElementById('datePicker').value = today;
-
-if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js'); }
-
-// 2. AUTOMATIC LOADING
-// This runs as soon as the page loads
-window.onload = () => {
-    refreshUI(); 
+// 1. On Load, check if we have a "saved" file reference
+window.onload = async () => {
+    const savedHandle = await getFileFromDB();
+    if (savedHandle) {
+        fileHandle = savedHandle;
+        document.getElementById('status').innerText = "📂 Found your file. Click 'Verify' to sync.";
+    }
+    loadFromCache(); // Always load memory first so it's instant
 };
 
-async function openFile() {
+// 2. The ONE click required to link/verify the file
+async function verifyAndLinkFile() {
     try {
-        [fileHandle] = await window.showOpenFilePicker();
+        if (!fileHandle) {
+            // First time setup: Pick the file
+            [fileHandle] = await window.showOpenFilePicker();
+            await saveFileToDB(fileHandle);
+        }
+
+        // Request permission to read/write
+        const options = { mode: 'readwrite' };
+        if (await fileHandle.queryPermission(options) !== 'granted') {
+            if (await fileHandle.requestPermission(options) !== 'granted') {
+                alert("Permission denied");
+                return;
+            }
+        }
+
+        // Load data from that file
         const file = await fileHandle.getFile();
         const content = await file.text();
         budgetData = JSON.parse(content);
         
-        // Sync the file data to LocalStorage so it's "automatic" next time
-        saveToCache();
+        localStorage.setItem('budgetData', JSON.stringify(budgetData));
+        document.getElementById('status').innerText = "✅ File Synced & Verified";
         refreshUI();
-    } catch (e) { alert("Load cancelled"); }
-}
-
-async function saveToFile() {
-    if (!fileHandle) {
-        fileHandle = await window.showSaveFilePicker({
-            suggestedName: 'my_budget_pro.txt',
-            types: [{ description: 'Text', accept: {'text/plain': ['.txt']} }]
-        });
+    } catch (e) {
+        console.error(e);
+        alert("Could not sync file.");
     }
-    const writable = await fileHandle.createWritable();
-    await writable.write(JSON.stringify(budgetData));
-    await writable.close();
-    alert("Hard copy saved to phone storage!");
 }
 
-function updateDaily() {
-    const date = document.getElementById('datePicker').value;
-    budgetData[date] = {
-        b: parseFloat(document.getElementById('meal_b').value) || 0,
-        l: parseFloat(document.getElementById('meal_l').value) || 0,
-        d: parseFloat(document.getElementById('meal_d').value) || 0,
-        o: parseFloat(document.getElementById('meal_o').value) || 0
-    };
+// 3. Automatic "Silent" Save
+async function autoSaveToFile() {
+    if (!fileHandle) return; // Skip if file isn't linked
     
-    saveToCache(); // Automatically saves to internal phone memory
+    try {
+        const writable = await fileHandle.createWritable();
+        await writable.write(JSON.stringify(budgetData));
+        await writable.close();
+        console.log("Automatically synced to .txt file");
+    } catch (e) {
+        console.log("Background save failed - permission may have expired.");
+    }
+}
+
+// Trigger this inside your updateData() function
+function updateData() {
+    // ... (your existing update logic) ...
+    localStorage.setItem('budgetData', JSON.stringify(budgetData));
+    autoSaveToFile(); // <--- This tries to write to the .txt silently
     refreshUI();
 }
 
-function saveToCache() {
-    localStorage.setItem('budgetCache', JSON.stringify(budgetData));
+// --- IndexedDB Helpers (To remember the file handle) ---
+function saveFileToDB(handle) {
+    const request = indexedDB.open("FileStorage", 1);
+    request.onupgradeneeded = e => e.target.result.createObjectStore("handles");
+    request.onsuccess = e => {
+        const db = e.target.result;
+        db.transaction("handles", "readwrite").objectStore("handles").put(handle, "currentFile");
+    };
 }
 
-function renderDay() {
-    const date = document.getElementById('datePicker').value;
-    const day = budgetData[date] || {b:0, l:0, d:0, o:0};
-    document.getElementById('meal_b').value = day.b;
-    document.getElementById('meal_l').value = day.l;
-    document.getElementById('meal_d').value = day.d;
-    document.getElementById('meal_o').value = day.o;
-    document.getElementById('dayTotal').innerText = (day.b + day.l + day.d + day.o).toFixed(2);
-}
-
-function refreshUI() {
-    renderDay();
-    calculateStats();
-}
-
-function calculateStats() {
-    const now = new Date();
-    const currentMonth = now.getMonth();
-    const currentYear = now.getFullYear();
-    
-    let monthTotal = 0;
-    let daysWithData = 0;
-
-    for (let dateStr in budgetData) {
-        const d = new Date(dateStr);
-        if (d.getMonth() === currentMonth && d.getFullYear() === currentYear) {
-            const day = budgetData[dateStr];
-            const dailySum = (day.b + day.l + day.d + day.o);
-            if(dailySum > 0) {
-                monthTotal += dailySum;
-                daysWithData++;
-            }
-        }
-    }
-
-    const avg = daysWithData > 0 ? (monthTotal / daysWithData) : 0;
-
-    document.getElementById('monthTotal').innerText = `$${monthTotal.toFixed(2)}`;
-    document.getElementById('dailyAvg').innerText = `$${avg.toFixed(2)}`;
+async function getFileFromDB() {
+    return new Promise((resolve) => {
+        const request = indexedDB.open("FileStorage", 1);
+        request.onupgradeneeded = e => e.target.result.createObjectStore("handles");
+        request.onsuccess = e => {
+            const db = e.target.result;
+            const getReq = db.transaction("handles").objectStore("handles").get("currentFile");
+            getReq.onsuccess = () => resolve(getReq.result);
+        };
+    });
 }
     </script>
 </body>
