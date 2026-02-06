@@ -2,9 +2,11 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Budget Pro</title>
     <link rel="manifest" href="manifest.json">
+
     <style>
         :root { 
             --primary: #28a745; 
@@ -12,18 +14,20 @@
             --bg: #f2f4f7; 
             --text: #333; 
         }
-        
-        /* Ensures the background fills 100% of the mobile screen */
-        html, body { 
-            min-height: 100vh; 
-            margin: 0; 
-            padding: 0; 
-            background-color: var(--bg); 
-            display: flex;
-            flex-direction: column;
+
+        /* ✅ FIXED: proper mobile height handling */
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg);
         }
-        
-        body { font-family: -apple-system, system-ui, sans-serif; color: var(--text); }
+
+        body {
+            font-family: -apple-system, system-ui, sans-serif;
+            color: var(--text);
+            overflow-x: hidden;
+        }
 
         #status { 
             background: #ffc107; 
@@ -32,201 +36,308 @@
             font-size: 13px; 
             font-weight: bold;
             box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-            display: none; /* Hidden unless a file handle is found */
+            display: none;
         }
         #status.synced { background: var(--primary); color: white; }
 
+        /* ✅ FIXED: fills screen without flex bugs */
         .main-wrapper {
             padding: 15px;
             max-width: 500px;
             margin: 0 auto;
             width: 100%;
             box-sizing: border-box;
-            flex-grow: 1; /* Pushes action buttons down */
+            min-height: calc(
+                100vh 
+                - env(safe-area-inset-top) 
+                - env(safe-area-inset-bottom)
+            );
         }
 
-        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 10px; margin-bottom: 20px; }
-        .stat-box { background: white; padding: 15px; border-radius: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); text-align: center; }
-        .stat-label { font-size: 11px; color: #888; text-transform: uppercase; font-weight: bold; }
-        .stat-val { display: block; font-size: 20px; font-weight: 800; color: var(--primary); margin-top: 5px; }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 10px;
+            margin-bottom: 20px;
+        }
 
-        .card { background: white; padding: 20px; border-radius: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 25px; }
-        h3 { margin: 0 0 15px 0; font-size: 18px; }
-        
-        input[type="date"] { border: 1px solid #eee; padding: 12px; border-radius: 10px; width: 100%; font-size: 16px; margin-bottom: 15px; box-sizing: border-box; background: #fafafa; }
-        
-        .meal-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f9f9f9; }
-        .meal-row label { font-weight: 600; color: #555; }
-        .meal-row input { width: 40%; padding: 10px; border: 1px solid #eee; border-radius: 8px; text-align: right; font-size: 16px; outline: none; }
+        .stat-box {
+            background: white;
+            padding: 15px;
+            border-radius: 15px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            text-align: center;
+        }
 
-        .day-total-box { margin-top: 15px; text-align: right; border-top: 1px solid #eee; padding-top: 10px; }
-        .day-total-box b { font-size: 22px; }
+        .stat-label {
+            font-size: 11px;
+            color: #888;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
 
-        .actions { padding: 10px 0 30px 0; }
-        .btn { width: 100%; padding: 16px; border: none; border-radius: 12px; font-size: 16px; font-weight: 700; margin-bottom: 12px; display: flex; align-items: center; justify-content: center; gap: 10px; }
-        .btn-blue { background: var(--accent); color: white; }
-        .btn-outline { background: #fff; border: 1px solid #ddd; color: #666; }
+        .stat-val {
+            display: block;
+            font-size: 20px;
+            font-weight: 800;
+            color: var(--primary);
+            margin-top: 5px;
+        }
+
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            margin-bottom: 25px;
+        }
+
+        h3 {
+            margin: 0 0 15px 0;
+            font-size: 18px;
+        }
+
+        input[type="date"] {
+            border: 1px solid #eee;
+            padding: 12px;
+            border-radius: 10px;
+            width: 100%;
+            font-size: 16px;
+            margin-bottom: 15px;
+            box-sizing: border-box;
+            background: #fafafa;
+        }
+
+        .meal-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid #f9f9f9;
+        }
+
+        .meal-row label {
+            font-weight: 600;
+            color: #555;
+        }
+
+        .meal-row input {
+            width: 40%;
+            padding: 10px;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            text-align: right;
+            font-size: 16px;
+            outline: none;
+        }
+
+        .day-total-box {
+            margin-top: 15px;
+            text-align: right;
+            border-top: 1px solid #eee;
+            padding-top: 10px;
+        }
+
+        .day-total-box b {
+            font-size: 22px;
+        }
+
+        .actions {
+            padding: 10px 0 30px 0;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 16px;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .btn-blue {
+            background: var(--accent);
+            color: white;
+        }
+
+        .btn-outline {
+            background: #fff;
+            border: 1px solid #ddd;
+            color: #666;
+        }
     </style>
 </head>
+
 <body>
 
-    <div id="status" onclick="verifyAndLinkFile()">📂 Found your file. Tap to Verify & Sync.</div>
+<div id="status" onclick="verifyAndLinkFile()">📂 Found your file. Tap to Verify & Sync.</div>
 
-    <div class="main-wrapper">
-        <div class="stats-grid">
-            <div class="stat-box">
-                <span class="stat-label">Month Total</span>
-                <span class="stat-val" id="monthTotal">Rs: 0</span>
-            </div>
-            <div class="stat-box">
-                <span class="stat-label">Daily Avg</span>
-                <span class="stat-val" id="dailyAvg">Rs: 0</span>
-            </div>
+<div class="main-wrapper">
+
+    <div class="stats-grid">
+        <div class="stat-box">
+            <span class="stat-label">Month Total</span>
+            <span class="stat-val" id="monthTotal">Rs: 0</span>
         </div>
-
-        <div class="card">
-            <h3>Daily Tracker</h3>
-            <input type="date" id="datePicker" onchange="renderDay()">
-            
-            <div class="meal-row">
-                <label>Breakfast</label>
-                <input type="number" id="meal_b" placeholder="0" onchange="updateDaily()">
-            </div>
-            <div class="meal-row">
-                <label>Lunch</label>
-                <input type="number" id="meal_l" placeholder="0" onchange="updateDaily()">
-            </div>
-            <div class="meal-row">
-                <label>Dinner</label>
-                <input type="number" id="meal_d" placeholder="0" onchange="updateDaily()">
-            </div>
-            <div class="meal-row">
-                <label>Other</label>
-                <input type="number" id="meal_o" placeholder="0" onchange="updateDaily()">
-            </div>
-
-            <div class="day-total-box">
-                <small style="color: #999; font-weight: bold;">Day Total</small><br>
-                <b>Rs: <span id="dayTotal">0</span></b>
-            </div>
-        </div>
-
-        <div class="actions">
-            <button class="btn btn-blue" onclick="saveToFile()">💾 Sync to Phone (.txt)</button>
-            <button class="btn btn-outline" onclick="verifyAndLinkFile()">📂 Link Existing File</button>
+        <div class="stat-box">
+            <span class="stat-label">Daily Avg</span>
+            <span class="stat-val" id="dailyAvg">Rs: 0</span>
         </div>
     </div>
 
-    <script>
-        let budgetData = JSON.parse(localStorage.getItem('budgetData')) || {};
-        let fileHandle;
+    <div class="card">
+        <h3>Daily Tracker</h3>
+        <input type="date" id="datePicker" onchange="renderDay()">
 
-        window.onload = async () => {
-            document.getElementById('datePicker').value = new Date().toISOString().split('T')[0];
-            fileHandle = await getFileFromDB();
-            if (fileHandle) {
-                const statusEl = document.getElementById('status');
-                statusEl.style.display = 'block';
-            }
-            refreshUI();
-        };
+        <div class="meal-row">
+            <label>Breakfast</label>
+            <input type="number" id="meal_b" placeholder="0" onchange="updateDaily()">
+        </div>
+        <div class="meal-row">
+            <label>Lunch</label>
+            <input type="number" id="meal_l" placeholder="0" onchange="updateDaily()">
+        </div>
+        <div class="meal-row">
+            <label>Dinner</label>
+            <input type="number" id="meal_d" placeholder="0" onchange="updateDaily()">
+        </div>
+        <div class="meal-row">
+            <label>Other</label>
+            <input type="number" id="meal_o" placeholder="0" onchange="updateDaily()">
+        </div>
 
-        async function verifyAndLinkFile() {
-            try {
-                if (!fileHandle) {
-                    [fileHandle] = await window.showOpenFilePicker();
-                    await saveFileToDB(fileHandle);
-                }
-                const options = { mode: 'readwrite' };
-                if (await fileHandle.requestPermission(options) === 'granted') {
-                    const file = await fileHandle.getFile();
-                    const content = await file.text();
-                    if(content) budgetData = JSON.parse(content);
-                    localStorage.setItem('budgetData', JSON.stringify(budgetData));
-                    
-                    const statusEl = document.getElementById('status');
-                    statusEl.innerText = "✅ File Connected";
-                    statusEl.classList.add('synced');
-                    setTimeout(() => statusEl.style.display = 'none', 2000);
-                    refreshUI();
-                }
-            } catch (e) { console.error(e); }
-        }
+        <div class="day-total-box">
+            <small style="color:#999;font-weight:bold;">Day Total</small><br>
+            <b>Rs: <span id="dayTotal">0</span></b>
+        </div>
+    </div>
 
-        async function autoSaveToFile() {
-            if (!fileHandle) return;
-            try {
-                const writable = await fileHandle.createWritable();
-                await writable.write(JSON.stringify(budgetData));
-                await writable.close();
-            } catch (e) { console.log("Sync skipped - re-verify file access."); }
-        }
+    <div class="actions">
+        <button class="btn btn-blue" onclick="saveToFile()">💾 Sync to Phone (.txt)</button>
+        <button class="btn btn-outline" onclick="verifyAndLinkFile()">📂 Link Existing File</button>
+    </div>
 
-        function updateDaily() {
-            const date = document.getElementById('datePicker').value;
-            budgetData[date] = {
-                b: parseFloat(document.getElementById('meal_b').value) || 0,
-                l: parseFloat(document.getElementById('meal_l').value) || 0,
-                d: parseFloat(document.getElementById('meal_d').value) || 0,
-                o: parseFloat(document.getElementById('meal_o').value) || 0
-            };
-            localStorage.setItem('budgetData', JSON.stringify(budgetData));
-            autoSaveToFile();
-            refreshUI();
-        }
+</div>
 
-        function renderDay() {
-            const date = document.getElementById('datePicker').value;
-            const day = budgetData[date] || {b:0, l:0, d:0, o:0};
-            document.getElementById('meal_b').value = day.b || "";
-            document.getElementById('meal_l').value = day.l || "";
-            document.getElementById('meal_d').value = day.d || "";
-            document.getElementById('meal_o').value = day.o || "";
-            document.getElementById('dayTotal').innerText = (day.b + day.l + day.d + day.o).toFixed(2);
-        }
+<script>
+    let budgetData = JSON.parse(localStorage.getItem('budgetData')) || {};
+    let fileHandle;
 
-        function calculateStats() {
-            const now = new Date();
-            const currM = now.getMonth(), currY = now.getFullYear();
-            let total = 0, days = 0;
-            for (let dStr in budgetData) {
-                const d = new Date(dStr);
-                if (d.getMonth() === currM && d.getFullYear() === currY) {
-                    const sum = (budgetData[dStr].b + budgetData[dStr].l + budgetData[dStr].d + budgetData[dStr].o);
-                    if (sum > 0) { total += sum; days++; }
-                }
-            }
-            document.getElementById('monthTotal').innerText = `Rs: ${total.toFixed(0)}`;
-            document.getElementById('dailyAvg').innerText = `Rs: ${(days > 0 ? total/days : 0).toFixed(0)}`;
-        }
+    window.onload = async () => {
+        document.getElementById('datePicker').value =
+            new Date().toISOString().split('T')[0];
 
-        function refreshUI() { renderDay(); calculateStats(); }
+        fileHandle = await getFileFromDB();
+        if (fileHandle) document.getElementById('status').style.display = 'block';
+        refreshUI();
+    };
 
-        async function saveToFile() {
+    async function verifyAndLinkFile() {
+        try {
             if (!fileHandle) {
-                fileHandle = await window.showSaveFilePicker({ suggestedName: 'budget.txt' });
+                [fileHandle] = await window.showOpenFilePicker();
                 await saveFileToDB(fileHandle);
             }
-            autoSaveToFile();
-            alert("Success: Synced with your file!");
-        }
+            if (await fileHandle.requestPermission({ mode: 'readwrite' }) === 'granted') {
+                const file = await fileHandle.getFile();
+                const content = await file.text();
+                if (content) budgetData = JSON.parse(content);
+                localStorage.setItem('budgetData', JSON.stringify(budgetData));
 
-        // IndexedDB Logic to remember the file handle
-        function saveFileToDB(handle) {
-            const req = indexedDB.open("FileStorage", 1);
-            req.onupgradeneeded = e => e.target.result.createObjectStore("handles");
-            req.onsuccess = e => e.target.result.transaction("handles", "readwrite").objectStore("handles").put(handle, "currentFile");
+                const s = document.getElementById('status');
+                s.innerText = "✅ File Connected";
+                s.classList.add('synced');
+                setTimeout(() => s.style.display = 'none', 2000);
+
+                refreshUI();
+            }
+        } catch (e) { console.error(e); }
+    }
+
+    function updateDaily() {
+        const date = datePicker.value;
+        budgetData[date] = {
+            b: +meal_b.value || 0,
+            l: +meal_l.value || 0,
+            d: +meal_d.value || 0,
+            o: +meal_o.value || 0
+        };
+        localStorage.setItem('budgetData', JSON.stringify(budgetData));
+        autoSaveToFile();
+        refreshUI();
+    }
+
+    function renderDay() {
+        const d = budgetData[datePicker.value] || {b:0,l:0,d:0,o:0};
+        meal_b.value = d.b || "";
+        meal_l.value = d.l || "";
+        meal_d.value = d.d || "";
+        meal_o.value = d.o || "";
+        dayTotal.innerText = (d.b + d.l + d.d + d.o).toFixed(2);
+    }
+
+    function calculateStats() {
+        const now = new Date();
+        let total = 0, days = 0;
+
+        for (let k in budgetData) {
+            const d = new Date(k);
+            if (d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()) {
+                const s = budgetData[k];
+                const sum = s.b + s.l + s.d + s.o;
+                if (sum > 0) { total += sum; days++; }
+            }
         }
-        async function getFileFromDB() {
-            return new Promise(res => {
-                const req = indexedDB.open("FileStorage", 1);
-                req.onupgradeneeded = e => e.target.result.createObjectStore("handles");
-                req.onsuccess = e => {
-                    const g = e.target.result.transaction("handles").objectStore("handles").get("currentFile");
-                    g.onsuccess = () => res(g.result);
-                };
-            });
+        monthTotal.innerText = `Rs: ${total.toFixed(0)}`;
+        dailyAvg.innerText = `Rs: ${(days ? total/days : 0).toFixed(0)}`;
+    }
+
+    function refreshUI() { renderDay(); calculateStats(); }
+
+    async function autoSaveToFile() {
+        if (!fileHandle) return;
+        try {
+            const w = await fileHandle.createWritable();
+            await w.write(JSON.stringify(budgetData));
+            await w.close();
+        } catch {}
+    }
+
+    async function saveToFile() {
+        if (!fileHandle) {
+            fileHandle = await window.showSaveFilePicker({ suggestedName: 'budget.txt' });
+            await saveFileToDB(fileHandle);
         }
-    </script>
+        autoSaveToFile();
+        alert("Success: Synced with your file!");
+    }
+
+    function saveFileToDB(handle) {
+        const r = indexedDB.open("FileStorage", 1);
+        r.onupgradeneeded = e => e.target.result.createObjectStore("handles");
+        r.onsuccess = e =>
+            e.target.result.transaction("handles", "readwrite")
+            .objectStore("handles").put(handle, "currentFile");
+    }
+
+    function getFileFromDB() {
+        return new Promise(res => {
+            const r = indexedDB.open("FileStorage", 1);
+            r.onupgradeneeded = e => e.target.result.createObjectStore("handles");
+            r.onsuccess = e => {
+                const g = e.target.result.transaction("handles")
+                    .objectStore("handles").get("currentFile");
+                g.onsuccess = () => res(g.result);
+            };
+        });
+    }
+</script>
+
 </body>
 </html>
