@@ -3,145 +3,74 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Pro Budget</title>
+    <title>Budget Pro</title>
     <link rel="manifest" href="manifest.json">
     <style>
-    :root { 
-        --primary: #28a745; 
-        --accent: #007bff; 
-        --bg: #f0f2f5; /* Light grey background for the whole screen */
-        --text: #333; 
-    }
-    
-    /* This ensures the background covers the entire phone screen height */
-    html, body { 
-        min-height: 100vh; 
-        margin: 0; 
-        padding: 0; 
-        background-color: var(--bg); 
-    }
-    
-    body { 
-        font-family: -apple-system, system-ui, sans-serif;
-        color: var(--text);
-        display: flex;
-        flex-direction: column;
-    }
+        :root { 
+            --primary: #28a745; 
+            --accent: #007bff; 
+            --bg: #f2f4f7; 
+            --text: #333; 
+        }
+        
+        /* Ensures the background fills 100% of the mobile screen */
+        html, body { 
+            min-height: 100vh; 
+            margin: 0; 
+            padding: 0; 
+            background-color: var(--bg); 
+            display: flex;
+            flex-direction: column;
+        }
+        
+        body { font-family: -apple-system, system-ui, sans-serif; color: var(--text); }
 
-    #status { 
-        background: #ffc107; 
-        padding: 14px; 
-        text-align: center; 
-        font-size: 13px; 
-        font-weight: bold;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    }
+        #status { 
+            background: #ffc107; 
+            padding: 14px; 
+            text-align: center; 
+            font-size: 13px; 
+            font-weight: bold;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            display: none; /* Hidden unless a file handle is found */
+        }
+        #status.synced { background: var(--primary); color: white; }
 
-    /* Main Container: No more vertical centering, adds proper padding */
-    .main-wrapper {
-        padding: 15px;
-        max-width: 500px;
-        margin: 0 auto;
-        width: 100%;
-        box-sizing: border-box;
-        flex-grow: 1; /* Pushes footer buttons down if needed */
-    }
+        .main-wrapper {
+            padding: 15px;
+            max-width: 500px;
+            margin: 0 auto;
+            width: 100%;
+            box-sizing: border-box;
+            flex-grow: 1; /* Pushes action buttons down */
+        }
 
-    .stats-grid { 
-        display: grid; 
-        grid-template-columns: 1fr 1fr; 
-        gap: 12px; 
-        margin-top: 10px;
-        margin-bottom: 20px; 
-    }
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 10px; margin-bottom: 20px; }
+        .stat-box { background: white; padding: 15px; border-radius: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); text-align: center; }
+        .stat-label { font-size: 11px; color: #888; text-transform: uppercase; font-weight: bold; }
+        .stat-val { display: block; font-size: 20px; font-weight: 800; color: var(--primary); margin-top: 5px; }
 
-    .stat-box { 
-        background: white; 
-        padding: 15px; 
-        border-radius: 15px; 
-        box-shadow: 0 2px 8px rgba(0,0,0,0.05); 
-        text-align: center; 
-    }
+        .card { background: white; padding: 20px; border-radius: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 25px; }
+        h3 { margin: 0 0 15px 0; font-size: 18px; }
+        
+        input[type="date"] { border: 1px solid #eee; padding: 12px; border-radius: 10px; width: 100%; font-size: 16px; margin-bottom: 15px; box-sizing: border-box; background: #fafafa; }
+        
+        .meal-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f9f9f9; }
+        .meal-row label { font-weight: 600; color: #555; }
+        .meal-row input { width: 40%; padding: 10px; border: 1px solid #eee; border-radius: 8px; text-align: right; font-size: 16px; outline: none; }
 
-    .stat-label { font-size: 11px; color: #888; text-transform: uppercase; font-weight: bold; }
-    .stat-val { display: block; font-size: 20px; font-weight: 800; color: var(--primary); margin-top: 5px; }
+        .day-total-box { margin-top: 15px; text-align: right; border-top: 1px solid #eee; padding-top: 10px; }
+        .day-total-box b { font-size: 22px; }
 
-    .card { 
-        background: white; 
-        padding: 20px; 
-        border-radius: 20px; 
-        box-shadow: 0 4px 15px rgba(0,0,0,0.05); 
-        margin-bottom: 25px; 
-    }
-
-    h3 { margin: 0 0 15px 0; font-size: 18px; }
-    
-    input[type="date"] { 
-        border: 1px solid #eee; 
-        padding: 12px; 
-        border-radius: 10px; 
-        width: 100%; 
-        font-size: 16px; 
-        margin-bottom: 15px; 
-        box-sizing: border-box; 
-        background: #fdfdfd;
-        -webkit-appearance: none; /* Fixes iOS date styling */
-    }
-    
-    .meal-row { 
-        display: flex; 
-        align-items: center; 
-        justify-content: space-between; 
-        padding: 12px 0; 
-        border-bottom: 1px solid #f9f9f9; 
-    }
-
-    .meal-row label { font-weight: 600; color: #555; }
-    .meal-row input { 
-        width: 40%; 
-        padding: 10px; 
-        border: 1px solid #eee; 
-        border-radius: 8px; 
-        text-align: right; 
-        font-size: 16px; 
-        outline: none;
-    }
-
-    .day-total-box { 
-        margin-top: 15px; 
-        text-align: right; 
-        border-top: 2px solid #f8f8f8; 
-        padding-top: 10px; 
-    }
-    .day-total-box b { font-size: 22px; }
-
-    /* Action Buttons: Positioned at the bottom for easy thumb access */
-    .actions { 
-        padding: 10px 0 30px 0; 
-    }
-
-    .btn { 
-        width: 100%; 
-        padding: 16px; 
-        border: none; 
-        border-radius: 12px; 
-        font-size: 16px; 
-        font-weight: 700; 
-        margin-bottom: 12px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 10px;
-        transition: transform 0.1s;
-    }
-    .btn:active { transform: scale(0.98); }
-    .btn-blue { background: var(--accent); color: white; }
-    .btn-outline { background: #fff; border: 1px solid #ddd; color: #666; }
-</style>
+        .actions { padding: 10px 0 30px 0; }
+        .btn { width: 100%; padding: 16px; border: none; border-radius: 12px; font-size: 16px; font-weight: 700; margin-bottom: 12px; display: flex; align-items: center; justify-content: center; gap: 10px; }
+        .btn-blue { background: var(--accent); color: white; }
+        .btn-outline { background: #fff; border: 1px solid #ddd; color: #666; }
+    </style>
 </head>
 <body>
 
-    <div id="status" onclick="verifyAndLinkFile()">Found your file. Tap to Verify & Sync.</div>
+    <div id="status" onclick="verifyAndLinkFile()">📂 Found your file. Tap to Verify & Sync.</div>
 
     <div class="main-wrapper">
         <div class="stats-grid">
@@ -161,19 +90,19 @@
             
             <div class="meal-row">
                 <label>Breakfast</label>
-                <input type="number" id="meal_b" placeholder="0" oninput="updateDaily()">
+                <input type="number" id="meal_b" placeholder="0" onchange="updateDaily()">
             </div>
             <div class="meal-row">
                 <label>Lunch</label>
-                <input type="number" id="meal_l" placeholder="0" oninput="updateDaily()">
+                <input type="number" id="meal_l" placeholder="0" onchange="updateDaily()">
             </div>
             <div class="meal-row">
                 <label>Dinner</label>
-                <input type="number" id="meal_d" placeholder="0" oninput="updateDaily()">
+                <input type="number" id="meal_d" placeholder="0" onchange="updateDaily()">
             </div>
             <div class="meal-row">
                 <label>Other</label>
-                <input type="number" id="meal_o" placeholder="0" oninput="updateDaily()">
+                <input type="number" id="meal_o" placeholder="0" onchange="updateDaily()">
             </div>
 
             <div class="day-total-box">
@@ -188,22 +117,16 @@
         </div>
     </div>
 
-    </body>
-
     <script>
         let budgetData = JSON.parse(localStorage.getItem('budgetData')) || {};
         let fileHandle;
 
         window.onload = async () => {
-            // Set date to today
             document.getElementById('datePicker').value = new Date().toISOString().split('T')[0];
-            
-            // Check IndexedDB for file handle
             fileHandle = await getFileFromDB();
             if (fileHandle) {
                 const statusEl = document.getElementById('status');
                 statusEl.style.display = 'block';
-                statusEl.innerText = "📂 Found your file. Tap to Verify & Sync.";
             }
             refreshUI();
         };
@@ -222,9 +145,9 @@
                     localStorage.setItem('budgetData', JSON.stringify(budgetData));
                     
                     const statusEl = document.getElementById('status');
-                    statusEl.innerText = "✅ File Synced & Connected";
+                    statusEl.innerText = "✅ File Connected";
                     statusEl.classList.add('synced');
-                    setTimeout(() => statusEl.style.display = 'none', 3000);
+                    setTimeout(() => statusEl.style.display = 'none', 2000);
                     refreshUI();
                 }
             } catch (e) { console.error(e); }
@@ -236,7 +159,7 @@
                 const writable = await fileHandle.createWritable();
                 await writable.write(JSON.stringify(budgetData));
                 await writable.close();
-            } catch (e) { console.log("Silent save failed (permission needed)"); }
+            } catch (e) { console.log("Sync skipped - re-verify file access."); }
         }
 
         function updateDaily() {
@@ -285,10 +208,10 @@
                 await saveFileToDB(fileHandle);
             }
             autoSaveToFile();
-            alert("Saved to File!");
+            alert("Success: Synced with your file!");
         }
 
-        // DB Helpers
+        // IndexedDB Logic to remember the file handle
         function saveFileToDB(handle) {
             const req = indexedDB.open("FileStorage", 1);
             req.onupgradeneeded = e => e.target.result.createObjectStore("handles");
