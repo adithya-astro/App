@@ -2,142 +2,206 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Pro Budget</title>
     <link rel="manifest" href="manifest.json">
     <style>
-        :root { --primary: #28a745; --bg: #f0f2f5; }
-        body { font-family: -apple-system, sans-serif; padding: 15px; background: var(--bg); margin: 0; }
-        .card { background: white; padding: 15px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); margin-bottom: 15px; }
-        h2, h3 { margin-top: 0; color: #333; }
-        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
-        .stat-box { background: white; padding: 15px; border-radius: 12px; text-align: center; }
-        .stat-val { display: block; font-size: 1.4rem; font-weight: bold; color: var(--primary); }
-        input, select { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
-        .btn { width: 100%; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 5px; }
-        .btn-save { background: var(--primary); color: white; }
-        .btn-file { background: #6c757d; color: white; margin-bottom: 10px; }
-        .day-detail { border-top: 1px solid #eee; margin-top: 10px; padding-top: 10px; }
-        .meal-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dotted #ccc; }
+        :root { --primary: #28a745; --accent: #007bff; --bg: #f8f9fa; --text: #333; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+               padding: 0; margin: 0; background: var(--bg); color: var(--text); line-height: 1.5; }
+        
+        /* Status Bar for File Sync */
+        #status { background: #ffc107; padding: 10px; text-align: center; font-size: 13px; font-weight: bold; cursor: pointer; display: none; }
+        #status.synced { background: var(--primary); color: white; }
+
+        .container { padding: 15px; max-width: 500px; margin: auto; }
+        h3 { margin: 0 0 15px 0; font-size: 18px; }
+
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+        .stat-box { background: white; padding: 15px; border-radius: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); text-align: center; }
+        .stat-label { font-size: 12px; color: #666; text-transform: uppercase; letter-spacing: 0.5px; }
+        .stat-val { display: block; font-size: 20px; font-weight: 800; color: var(--primary); margin-top: 5px; }
+
+        .card { background: white; padding: 20px; border-radius: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        
+        input[type="date"] { border: 1px solid #ddd; padding: 10px; border-radius: 10px; width: 100%; font-size: 16px; margin-bottom: 15px; box-sizing: border-box; }
+        
+        .meal-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f0f0f0; }
+        .meal-row:last-child { border-bottom: none; }
+        .meal-row label { font-weight: 600; color: #555; }
+        .meal-row input { width: 40%; padding: 8px; border: 1px solid #eee; border-radius: 8px; text-align: right; font-size: 16px; outline: none; }
+        .meal-row input:focus { border-color: var(--accent); }
+
+        .day-total-box { margin-top: 15px; text-align: right; padding-top: 10px; }
+        .day-total-box span { font-size: 22px; font-weight: 800; color: var(--text); }
+
+        .btn { width: 100%; padding: 15px; border: none; border-radius: 12px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 10px; display: flex; align-items: center; justify-content: center; gap: 8px; transition: opacity 0.2s; }
+        .btn:active { opacity: 0.8; }
+        .btn-blue { background: var(--accent); color: white; }
+        .btn-outline { background: transparent; border: 2px solid #ddd; color: #666; margin-top: 20px; }
     </style>
 </head>
 <body>
 
-    <button class="btn btn-file" onclick="openFile()">📂 Load Budget File</button>
+    <div id="status" onclick="verifyAndLinkFile()">Checking for synced file...</div>
 
-    <div class="stats-grid">
-        <div class="stat-box">
-            <span class="stat-label">Month Total</span>
-            <span class="stat-val" id="monthTotal">$0</span>
+    <div class="container">
+        <div class="stats-grid">
+            <div class="stat-box">
+                <span class="stat-label">Month Total</span>
+                <span class="stat-val" id="monthTotal">Rs: 0</span>
+            </div>
+            <div class="stat-box">
+                <span class="stat-label">Daily Avg</span>
+                <span class="stat-val" id="dailyAvg">Rs: 0</span>
+            </div>
         </div>
-        <div class="stat-box">
-            <span class="stat-label">Daily Avg</span>
-            <span class="stat-val" id="dailyAvg">$0</span>
+
+        <div class="card">
+            <h3>Daily Tracker</h3>
+            <input type="date" id="datePicker" onchange="renderDay()">
+            
+            <div class="meal-row">
+                <label>Breakfast</label>
+                <input type="number" id="meal_b" placeholder="0" oninput="updateDaily()">
+            </div>
+            <div class="meal-row">
+                <label>Lunch</label>
+                <input type="number" id="meal_l" placeholder="0" oninput="updateDaily()">
+            </div>
+            <div class="meal-row">
+                <label>Dinner</label>
+                <input type="number" id="meal_d" placeholder="0" oninput="updateDaily()">
+            </div>
+            <div class="meal-row">
+                <label>Other</label>
+                <input type="number" id="meal_o" placeholder="0" oninput="updateDaily()">
+            </div>
+
+            <div class="day-total-box">
+                <span style="font-size: 14px; color: #888;">Day Total:</span><br>
+                <span>Rs: <span id="dayTotal">0</span></span>
+            </div>
         </div>
+
+        <button class="btn btn-blue" onclick="saveToFile()">💾 Sync to Phone (.txt)</button>
+        <button class="btn btn-outline" onclick="verifyAndLinkFile()">📂 Link Existing File</button>
     </div>
-
-    <div class="card">
-        <h3>Daily Tracker</h3>
-        <input type="date" id="datePicker" onchange="renderDay()">
-        <div id="dayContent" class="day-detail">
-            <div class="meal-row"><span>Breakfast:</span><input type="number" id="meal_b" placeholder="0" onchange="updateDaily()"></div>
-            <div class="meal-row"><span>Lunch:</span><input type="number" id="meal_l" placeholder="0" onchange="updateDaily()"></div>
-            <div class="meal-row"><span>Dinner:</span><input type="number" id="meal_d" placeholder="0" onchange="updateDaily()"></div>
-            <div class="meal-row"><span>Other:</span><input type="number" id="meal_o" placeholder="0" onchange="updateDaily()"></div>
-            <h4 style="text-align: right;">Day Total: Rs: <span id="dayTotal">0</span></h4>
-        </div>
-    </div>
-
-    <button class="btn btn-file" style="background:#007bff" onclick="saveToFile()">💾 Sync to Phone</button>
 
     <script>
-        /let fileHandle;
+        let budgetData = JSON.parse(localStorage.getItem('budgetData')) || {};
+        let fileHandle;
 
-// 1. On Load, check if we have a "saved" file reference
-window.onload = async () => {
-    const savedHandle = await getFileFromDB();
-    if (savedHandle) {
-        fileHandle = savedHandle;
-        document.getElementById('status').innerText = "📂 Found your file. Click 'Verify' to sync.";
-    }
-    loadFromCache(); // Always load memory first so it's instant
-};
-
-// 2. The ONE click required to link/verify the file
-async function verifyAndLinkFile() {
-    try {
-        if (!fileHandle) {
-            // First time setup: Pick the file
-            [fileHandle] = await window.showOpenFilePicker();
-            await saveFileToDB(fileHandle);
-        }
-
-        // Request permission to read/write
-        const options = { mode: 'readwrite' };
-        if (await fileHandle.queryPermission(options) !== 'granted') {
-            if (await fileHandle.requestPermission(options) !== 'granted') {
-                alert("Permission denied");
-                return;
+        window.onload = async () => {
+            // Set date to today
+            document.getElementById('datePicker').value = new Date().toISOString().split('T')[0];
+            
+            // Check IndexedDB for file handle
+            fileHandle = await getFileFromDB();
+            if (fileHandle) {
+                const statusEl = document.getElementById('status');
+                statusEl.style.display = 'block';
+                statusEl.innerText = "📂 Found your file. Tap to Verify & Sync.";
             }
+            refreshUI();
+        };
+
+        async function verifyAndLinkFile() {
+            try {
+                if (!fileHandle) {
+                    [fileHandle] = await window.showOpenFilePicker();
+                    await saveFileToDB(fileHandle);
+                }
+                const options = { mode: 'readwrite' };
+                if (await fileHandle.requestPermission(options) === 'granted') {
+                    const file = await fileHandle.getFile();
+                    const content = await file.text();
+                    if(content) budgetData = JSON.parse(content);
+                    localStorage.setItem('budgetData', JSON.stringify(budgetData));
+                    
+                    const statusEl = document.getElementById('status');
+                    statusEl.innerText = "✅ File Synced & Connected";
+                    statusEl.classList.add('synced');
+                    setTimeout(() => statusEl.style.display = 'none', 3000);
+                    refreshUI();
+                }
+            } catch (e) { console.error(e); }
         }
 
-        // Load data from that file
-        const file = await fileHandle.getFile();
-        const content = await file.text();
-        budgetData = JSON.parse(content);
-        
-        localStorage.setItem('budgetData', JSON.stringify(budgetData));
-        document.getElementById('status').innerText = "✅ File Synced & Verified";
-        refreshUI();
-    } catch (e) {
-        console.error(e);
-        alert("Could not sync file.");
-    }
-}
+        async function autoSaveToFile() {
+            if (!fileHandle) return;
+            try {
+                const writable = await fileHandle.createWritable();
+                await writable.write(JSON.stringify(budgetData));
+                await writable.close();
+            } catch (e) { console.log("Silent save failed (permission needed)"); }
+        }
 
-// 3. Automatic "Silent" Save
-async function autoSaveToFile() {
-    if (!fileHandle) return; // Skip if file isn't linked
-    
-    try {
-        const writable = await fileHandle.createWritable();
-        await writable.write(JSON.stringify(budgetData));
-        await writable.close();
-        console.log("Automatically synced to .txt file");
-    } catch (e) {
-        console.log("Background save failed - permission may have expired.");
-    }
-}
+        function updateDaily() {
+            const date = document.getElementById('datePicker').value;
+            budgetData[date] = {
+                b: parseFloat(document.getElementById('meal_b').value) || 0,
+                l: parseFloat(document.getElementById('meal_l').value) || 0,
+                d: parseFloat(document.getElementById('meal_d').value) || 0,
+                o: parseFloat(document.getElementById('meal_o').value) || 0
+            };
+            localStorage.setItem('budgetData', JSON.stringify(budgetData));
+            autoSaveToFile();
+            refreshUI();
+        }
 
-// Trigger this inside your updateData() function
-function updateData() {
-    // ... (your existing update logic) ...
-    localStorage.setItem('budgetData', JSON.stringify(budgetData));
-    autoSaveToFile(); // <--- This tries to write to the .txt silently
-    refreshUI();
-}
+        function renderDay() {
+            const date = document.getElementById('datePicker').value;
+            const day = budgetData[date] || {b:0, l:0, d:0, o:0};
+            document.getElementById('meal_b').value = day.b || "";
+            document.getElementById('meal_l').value = day.l || "";
+            document.getElementById('meal_d').value = day.d || "";
+            document.getElementById('meal_o').value = day.o || "";
+            document.getElementById('dayTotal').innerText = (day.b + day.l + day.d + day.o).toFixed(2);
+        }
 
-// --- IndexedDB Helpers (To remember the file handle) ---
-function saveFileToDB(handle) {
-    const request = indexedDB.open("FileStorage", 1);
-    request.onupgradeneeded = e => e.target.result.createObjectStore("handles");
-    request.onsuccess = e => {
-        const db = e.target.result;
-        db.transaction("handles", "readwrite").objectStore("handles").put(handle, "currentFile");
-    };
-}
+        function calculateStats() {
+            const now = new Date();
+            const currM = now.getMonth(), currY = now.getFullYear();
+            let total = 0, days = 0;
+            for (let dStr in budgetData) {
+                const d = new Date(dStr);
+                if (d.getMonth() === currM && d.getFullYear() === currY) {
+                    const sum = (budgetData[dStr].b + budgetData[dStr].l + budgetData[dStr].d + budgetData[dStr].o);
+                    if (sum > 0) { total += sum; days++; }
+                }
+            }
+            document.getElementById('monthTotal').innerText = `Rs: ${total.toFixed(0)}`;
+            document.getElementById('dailyAvg').innerText = `Rs: ${(days > 0 ? total/days : 0).toFixed(0)}`;
+        }
 
-async function getFileFromDB() {
-    return new Promise((resolve) => {
-        const request = indexedDB.open("FileStorage", 1);
-        request.onupgradeneeded = e => e.target.result.createObjectStore("handles");
-        request.onsuccess = e => {
-            const db = e.target.result;
-            const getReq = db.transaction("handles").objectStore("handles").get("currentFile");
-            getReq.onsuccess = () => resolve(getReq.result);
-        };
-    });
-}
+        function refreshUI() { renderDay(); calculateStats(); }
+
+        async function saveToFile() {
+            if (!fileHandle) {
+                fileHandle = await window.showSaveFilePicker({ suggestedName: 'budget.txt' });
+                await saveFileToDB(fileHandle);
+            }
+            autoSaveToFile();
+            alert("Saved to File!");
+        }
+
+        // DB Helpers
+        function saveFileToDB(handle) {
+            const req = indexedDB.open("FileStorage", 1);
+            req.onupgradeneeded = e => e.target.result.createObjectStore("handles");
+            req.onsuccess = e => e.target.result.transaction("handles", "readwrite").objectStore("handles").put(handle, "currentFile");
+        }
+        async function getFileFromDB() {
+            return new Promise(res => {
+                const req = indexedDB.open("FileStorage", 1);
+                req.onupgradeneeded = e => e.target.result.createObjectStore("handles");
+                req.onsuccess = e => {
+                    const g = e.target.result.transaction("handles").objectStore("handles").get("currentFile");
+                    g.onsuccess = () => res(g.result);
+                };
+            });
+        }
     </script>
 </body>
 </html>
